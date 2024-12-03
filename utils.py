@@ -10,15 +10,28 @@ def FluxUpdateModules(bi, ip_attn_procs, image_emb, is_patched):
     dsb_count = len(flux_model.diffusion_model.double_blocks)
     ssb_count = len(flux_model.diffusion_model.single_blocks)
     for i in range(dsb_count):
-        # initial ipa models with image embeddings
-        temp_layer = DoubleStreamBlockIPA(flux_model.diffusion_model.double_blocks[i],ip_attn_procs[f"double_blocks.{i}"],image_emb)
-        bi.add_object_patch(f"diffusion_model.double_blocks.{i}",temp_layer)
+        patch_name = f"double_blocks.{i}"
+        existing_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
+        if isinstance(existing_layer, DoubleStreamBlockIPA):
+            # add a second ipadapter to the block
+            existing_layer.add_adapter(ip_attn_procs[patch_name], image_emb)
+        else:
+            # initial ipa models with image embeddings
+            temp_layer = DoubleStreamBlockIPA(flux_model.diffusion_model.double_blocks[i], ip_attn_procs[patch_name], image_emb)
+            # TODO: maybe there's a different patching method that will automatically chain patches?
+            # for example, ComfyUI internally uses model.add_patches to add loras
+            bi.add_object_patch(f"diffusion_model.{patch_name}", temp_layer)
     for i in range(ssb_count):
-        # initial ipa models with image embeddings
-        temp_layer=SingleStreamBlockIPA(flux_model.diffusion_model.single_blocks[i],ip_attn_procs[f"single_blocks.{i}"],image_emb)
-        bi.add_object_patch(f"diffusion_model.single_blocks.{i}",temp_layer)
+        patch_name = f"single_blocks.{i}"
+        existing_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
+        if isinstance(existing_layer, SingleStreamBlockIPA):
+            existing_layer.add_adapter(ip_attn_procs[patch_name], image_emb)
+        else:
+            # initial ipa models with image embeddings
+            temp_layer = SingleStreamBlockIPA(flux_model.diffusion_model.single_blocks[i], ip_attn_procs[patch_name], image_emb)
+            bi.add_object_patch(f"diffusion_model.{patch_name}", temp_layer)
         
-def is_model_pathched(model):
+def is_model_patched(model):
     def test(mod):
         if isinstance(mod, DoubleStreamBlockIPA):
             return True
@@ -38,7 +51,7 @@ def forward_orig_ipa(
     txt_ids: Tensor,
     timesteps: Tensor,
     y: Tensor,
-    guidance: Tensor = None,
+    guidance: Tensor|None = None,
     control=None,
     transformer_options={},
 ) -> Tensor:

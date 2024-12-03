@@ -28,8 +28,8 @@ class IPAFluxAttnProcessor2_0(nn.Module):
         num_heads,
         query,
         image_emb: torch.FloatTensor,
-        t: torch.FloatTensor
-    ) -> torch.FloatTensor:
+        t: torch.FloatTensor|torch.Tensor
+    ) -> torch.FloatTensor|torch.Tensor|None:
         # only apply IPA if timestep is within range
         if self.timestep_range is not None:
             if t[0] > self.timestep_range[0] or t[0] < self.timestep_range[1]:

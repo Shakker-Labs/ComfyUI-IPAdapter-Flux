@@ -7,7 +7,7 @@ from transformers import AutoProcessor, SiglipVisionModel
 from PIL import Image
 import numpy as np
 from .attention_processor import IPAFluxAttnProcessor2_0
-from .utils import is_model_pathched, FluxUpdateModules
+from .utils import is_model_patched, FluxUpdateModules
 
 MODELS_DIR = os.path.join(folder_paths.models_dir, "ipadapter-flux")
 if "ipadapter-flux" not in folder_paths.folder_names_and_paths:
@@ -153,7 +153,7 @@ class ApplyIPAdapterFlux:
             pil_image=pil_image, clip_image_embeds=None
         )
         # set model
-        is_patched = is_model_pathched(model.model)
+        is_patched = is_model_patched(model.model)
         bi = model.clone()
         FluxUpdateModules(bi, ip_attn_procs, image_prompt_embeds, is_patched)
         return (bi,)
