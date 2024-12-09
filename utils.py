@@ -6,19 +6,34 @@ from types import MethodType
 
 def FluxUpdateModules(bi, ip_attn_procs, image_emb, is_patched):
     flux_model = bi.model
-    bi.add_object_patch(f"diffusion_model.forward_orig",MethodType(forward_orig_ipa,flux_model.diffusion_model))
-    dsb_count = len(flux_model.diffusion_model.double_blocks)
-    ssb_count = len(flux_model.diffusion_model.single_blocks)
-    for i in range(dsb_count):
+    bi.add_object_patch(f"diffusion_model.forward_orig", MethodType(forward_orig_ipa, flux_model.diffusion_model))
+    for i, original in enumerate(flux_model.diffusion_model.double_blocks):
+        patch_name = f"double_blocks.{i}"
+        maybe_patched_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
+        # if there's already a patch there, collect its adapters and replace it
+        procs = [ip_attn_procs[patch_name]]
+        embs = [image_emb]
+        if isinstance(maybe_patched_layer, DoubleStreamBlockIPA):
+            procs = maybe_patched_layer.ip_adapter + procs
+            embs = maybe_patched_layer.image_emb + embs
         # initial ipa models with image embeddings
-        temp_layer = DoubleStreamBlockIPA(flux_model.diffusion_model.double_blocks[i],ip_attn_procs[f"double_blocks.{i}"],image_emb)
-        bi.add_object_patch(f"diffusion_model.double_blocks.{i}",temp_layer)
-    for i in range(ssb_count):
+        new_layer = DoubleStreamBlockIPA(original, procs, embs)
+        # TODO: maybe there's a different patching method that will automatically chain patches?
+        # for example, ComfyUI internally uses model.add_patches to add loras
+        bi.add_object_patch(f"diffusion_model.{patch_name}", new_layer)
+    for i, original in enumerate(flux_model.diffusion_model.single_blocks):
+        patch_name = f"single_blocks.{i}"
+        maybe_patched_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
+        procs = [ip_attn_procs[patch_name]]
+        embs = [image_emb]
+        if isinstance(maybe_patched_layer, SingleStreamBlockIPA):
+            procs = maybe_patched_layer.ip_adapter + procs
+            embs = maybe_patched_layer.image_emb + embs
         # initial ipa models with image embeddings
-        temp_layer=SingleStreamBlockIPA(flux_model.diffusion_model.single_blocks[i],ip_attn_procs[f"single_blocks.{i}"],image_emb)
-        bi.add_object_patch(f"diffusion_model.single_blocks.{i}",temp_layer)
+        new_layer = SingleStreamBlockIPA(original, procs, embs)
+        bi.add_object_patch(f"diffusion_model.{patch_name}", new_layer)
         
-def is_model_pathched(model):
+def is_model_patched(model):
     def test(mod):
         if isinstance(mod, DoubleStreamBlockIPA):
             return True
@@ -38,7 +53,7 @@ def forward_orig_ipa(
     txt_ids: Tensor,
     timesteps: Tensor,
     y: Tensor,
-    guidance: Tensor = None,
+    guidance: Tensor|None = None,
     control=None,
     transformer_options={},
 ) -> Tensor:
