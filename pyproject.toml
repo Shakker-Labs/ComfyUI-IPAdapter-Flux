@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-ipadapter-flux"
+description = "NODES:Load IPAdapter Flux Model, Apply IPAdapter Flux Model"
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["einops==0.8.0", "transformers>=4.37.2", "diffusers", "sentencepiece>=0.2.0", "protobuf>=4.25.5"]
+
+[project.urls]
+Repository = "https://github.com/Shakker-Labs/ComfyUI-IPAdapter-Flux"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-IPAdapter-Flux"
+Icon = ""
