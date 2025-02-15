@@ -13,6 +13,8 @@ if "ipadapter-flux" not in folder_paths.folder_names_and_paths:
     current_paths = [MODELS_DIR]
 else:
     current_paths, _ = folder_paths.folder_names_and_paths["ipadapter-flux"]
+    MODELS_DIR = current_paths[0]
+    
 folder_paths.folder_names_and_paths["ipadapter-flux"] = (current_paths, folder_paths.supported_pt_extensions)
 
 class MLPProjModelAdvanced(torch.nn.Module):
