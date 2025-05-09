@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import weakref
 from diffusers.models.normalization import RMSNorm
 from einops import rearrange
 
 class IPAFluxAttnProcessor2_0Advanced(nn.Module):
-    _instances = set()
+    _instances = weakref.WeakSet()
     _global_call_count = 0
     _last_timestep_printed = None
     _first_instance_for_timestep = None  # Add this line
@@ -61,6 +62,7 @@ class IPAFluxAttnProcessor2_0Advanced(nn.Module):
         # print(f"Steps and seen timesteps have been reset for this instance.")
 
     def __del__(self):
+        self.clear_memory()
         # Remove this instance from the set when it's deleted
         self.__class__._instances.remove(self)
             
