@@ -16,6 +16,12 @@ else:
     current_paths, _ = folder_paths.folder_names_and_paths["ipadapter-flux"]
     MODELS_DIR = current_paths[0]
     
+clip_vision_path = os.path.join(folder_paths.models_dir, "clip_vision")
+clip_path_list = []
+for i in os.listdir(clip_vision_path):
+    clip_path_list.append(os.path.join(clip_vision_path, i))
+clip_path_list = sorted(clip_path_list)
+
 folder_paths.folder_names_and_paths["ipadapter-flux"] = (current_paths, folder_paths.supported_pt_extensions)
 
 class MLPProjModel(torch.nn.Module):
@@ -121,7 +127,7 @@ class IPAdapterFluxLoader:
     def INPUT_TYPES(s):
         return {"required": {
                 "ipadapter": (folder_paths.get_filename_list("ipadapter-flux"),),
-                "clip_vision": (["google/siglip-so400m-patch14-384"],),
+                "clip_vision": (clip_path_list),
                 "provider": (["cuda", "cpu", "mps"],),
             }
         }
