@@ -3,14 +3,30 @@ from torch import Tensor
 from .flux.layers import DoubleStreamBlockIPA, SingleStreamBlockIPA
 from comfy.ldm.flux.layers import timestep_embedding
 from types import MethodType
+import hashlib
+import logging
 
 def FluxUpdateModules(bi, ip_attn_procs, image_emb, is_patched):
+    """
+    Apply IP-Adapter attention processors to the Flux model.
+    
+    Args:
+        bi: model object to patch methods and attributes.
+        ip_attn_procs: Dictionary of IP-Adapter attention processors.
+        image_emb: Image embeddings for attention.
+        is_patched: Boolean indicating if model is already patched.
+    """
     flux_model = bi.model
     bi.add_object_patch(f"diffusion_model.forward_orig", MethodType(forward_orig_ipa, flux_model.diffusion_model))
+    
+    # Patch double blocks
     for i, original in enumerate(flux_model.diffusion_model.double_blocks):
         patch_name = f"double_blocks.{i}"
+        if patch_name not in ip_attn_procs:
+                logging.debug(f"Skipping {patch_name} as no IP-Adapter processor found")
+                continue
         maybe_patched_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
-        # if there's already a patch there, collect its adapters and replace it
+        # if there's already a patch there, collect its adapters and replace it        
         procs = [ip_attn_procs[patch_name]]
         embs = [image_emb]
         if isinstance(maybe_patched_layer, DoubleStreamBlockIPA):
@@ -21,8 +37,13 @@ def FluxUpdateModules(bi, ip_attn_procs, image_emb, is_patched):
         # TODO: maybe there's a different patching method that will automatically chain patches?
         # for example, ComfyUI internally uses model.add_patches to add loras
         bi.add_object_patch(f"diffusion_model.{patch_name}", new_layer)
+    
+    # Patch single blocks only if processors exist
     for i, original in enumerate(flux_model.diffusion_model.single_blocks):
         patch_name = f"single_blocks.{i}"
+        if patch_name not in ip_attn_procs:
+            logging.debug(f"Skipping {patch_name} as no IP-Adapter processor found")
+            continue
         maybe_patched_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
         procs = [ip_attn_procs[patch_name]]
         embs = [image_emb]
@@ -133,3 +154,14 @@ def forward_orig_ipa(
 
     img = self.final_layer(img, vec)  # (N, T, patch_size ** 2 * out_channels)
     return img
+    
+def _compute_sha256(file_path):
+    sha256_hash = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(chunk)
+        return sha256_hash.hexdigest()
+    except Exception as e:
+        logging.warning(f"Failed to compute SHA256 for {file_path}: {e}")
+        return None

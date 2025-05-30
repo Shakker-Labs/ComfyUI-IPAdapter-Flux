@@ -1,0 +1,4 @@
+KNOWN_XLAB_HASHES = {
+    "750f912149b84bbb0c2a6ce90ffa7e78afd1795821407718724ebcd36372dc2d",
+    "8f2bfddaffc4fe2a6667bef24c8ce6075e81d01d0f6b0f9adbe46ad686057ee2"
+}
