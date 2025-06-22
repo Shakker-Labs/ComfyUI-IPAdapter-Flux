@@ -66,7 +66,7 @@ class InstantXFluxIPAdapterModelAdvanced:
         ).to(self.device, dtype=torch.float16)
         self.image_proj_model.load_state_dict(state_dict["image_proj"], strict=True)
         # init ipadapter model
-        self.ip_attn_procs = self.init_ip_adapter()
+        self.ip_attn_procs = self.init_ip_adapter_advanced()
         ip_layers = torch.nn.ModuleList(self.ip_attn_procs.values())
         ip_layers.load_state_dict(state_dict["ip_adapter"], strict=True)
         del state_dict
